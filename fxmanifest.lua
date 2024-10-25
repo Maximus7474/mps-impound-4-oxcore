@@ -2,8 +2,9 @@ fx_version 'cerulean'
 use_experimental_fxv2_oal 'yes'
 lua54 'yes'
 game 'gta5'
+repository 'https://github.com/Maximus7474/mps-impound-4-oxcore'
 
-version '0.0.0'
+version '0.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua'
