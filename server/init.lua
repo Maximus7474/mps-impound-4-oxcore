@@ -7,7 +7,8 @@ lib.callback.register('garage:getImpoundedVehicles', function (source, impound)
         return false
     end
 
-    local playerCoords, impoundCoords = GetEntityCoords(GetPlayerPed(source)), impounds[impound].ped.position
+    local impoundData = impounds[impound]
+    local playerCoords, impoundCoords = GetEntityCoords(GetPlayerPed(source)), impoundData.ped.position
     if #(playerCoords.xyz - impoundCoords.xyz) > 10.0 then
         lib.print.warn(source, 'tried to exploit impound callback')
         return false
@@ -15,11 +16,18 @@ lib.callback.register('garage:getImpoundedVehicles', function (source, impound)
 
     local player = Ox.GetPlayer(source)
     local response = MySQL.query.await(
-        'SELECT `id`, `plate`, `vin`, `model` FROM `vehicles` WHERE `owner` = ? AND (`stored` = ? OR `stored` = "impound")',
+        'SELECT `id`, `plate`, `vin`, `model`, `class` FROM `vehicles` WHERE `owner` = ? AND (`stored` = ? OR `stored` = "impound")',
         {player.charId, impound}
     )
 
-    return response
+    local vehicles = {}
+    for _, data in pairs(response) do
+        if lib.table.contains(impoundData.classes, data.class) then
+            vehicles[#vehicles+1] = data
+        end
+    end
+
+    return vehicles
 end)
 
 RegisterNetEvent('garage:retrieveVehicle', function (impound, dbid)
