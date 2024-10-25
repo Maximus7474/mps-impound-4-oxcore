@@ -31,8 +31,12 @@ jobs:
         git commit -m "Update fxmanifest.lua to version ${{ env.version }}"
 
     - name: Push updated fxmanifest.lua
+      env:
+        TOKEN: ${{ secrets.RELEASE }}
       run: |
+        git remote set-url origin https://$TOKEN@github.com/Maximus7474/mps-impound-4-oxcore.git
         git push origin HEAD
+      
 
     - name: Create Release
       uses: actions/create-release@v1
