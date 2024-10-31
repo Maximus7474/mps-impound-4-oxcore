@@ -5,6 +5,8 @@ local currentImpound = nil
 ---@field id number database id
 ---@field model string
 ---@field plate string
+---@field reason string|nil
+---@field sum number
 
 ---@param data VehiclePreview
 local function selectVehicle(data)
@@ -12,7 +14,7 @@ local function selectVehicle(data)
 
     local response = lib.alertDialog({
         header = "Confirm Impound Retrieval",
-        content = "Do you want to retrieve your vehicle for 50$ ?",
+        content = ("Do you want to retrieve your vehicle for %d$ ?"):format(data.sum),
         cancel = true,
         centered = true,
     })
@@ -28,12 +30,15 @@ local function formatVehicles(vehicles)
     local options = {}
 
     for _, data in pairs(vehicles) do
+        local metadata = {{ label = 'VIN', value = data.vin }}
+        if data.reason then
+            metadata[#metadata+1] = { label = 'Impound Reason', value = data.reason }
+        end
+
         options[#options+1] = {
             title = GetDisplayNameFromVehicleModel(joaat(data.model)),
-            description = ('Plate: %s'):format(data.plate),
-            metadata = {
-                { label = 'VIN:', value = data.vin }
-            },
+            description = ('Plate: %s \nCost: %d$'):format(data.plate, data?.sum or 50),
+            metadata = metadata,
             onSelect = selectVehicle,
             args = data
         }

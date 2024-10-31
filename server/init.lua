@@ -15,8 +15,11 @@ lib.callback.register('garage:getImpoundedVehicles', function (source, impound)
     end
 
     local player = Ox.GetPlayer(source)
-    local response = MySQL.query.await(
-        'SELECT `id`, `plate`, `vin`, `model`, `class` FROM `vehicles` WHERE `owner` = ? AND (`stored` = ? OR `stored` = "impound")',
+    local response = MySQL.query.await([[
+        SELECT v.id, v.plate, v.vin, v.model, v.class, impound_info.sum, impound_info.reason
+        FROM vehicles AS v
+        LEFT JOIN vehicles_impound_data AS impound_info ON v.vin = impound_info.vin
+        WHERE v.owner = ? AND (v.stored = ? OR v.stored = "impound")]],
         {player.charId, impound}
     )
 
@@ -43,10 +46,15 @@ RegisterNetEvent('garage:retrieveVehicle', function (impound, dbid)
         return false
     end
 
-    local class = MySQL.single.await(
-        'SELECT `class` FROM `vehicles` WHERE `id` = ?',
+    local data = MySQL.single.await([[
+        SELECT v.class, v.vin, vid.sum
+        FROM vehicles AS v
+        LEFT JOIN vehicles_impound_data AS vid ON v.vin = vid.vin
+        WHERE v.id = ? ]],
         {dbid}
     )
+
+    local class, impoundSum, vin = data.class, data?.sum or 50, data.vin
 
     local spawnPoints = impounds[impound].spawnpoints
     local spawnPosition = spawnPoints[class] or spawnPoints.default
@@ -64,6 +72,8 @@ RegisterNetEvent('garage:retrieveVehicle', function (impound, dbid)
     if not status.success then
         return TriggerClientEvent('ox_lib:notify', source, {description = "You do not have sufficient funds", type = "error"})
     end
+
+    MySQL.update('DELETE FROM vehicles_impound_data WHERE vin = ?', {vin})
 
     TriggerClientEvent('ox_lib:notify', source, {description = "You've paid the impound fine", type = "succes"})
 
