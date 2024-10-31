@@ -1,6 +1,8 @@
 local Ox = require '@ox_core/lib/init'
 local impounds = require 'shared.impounds'
 
+local defaultImpoundCost = GetConvarInt('impound:defaultImpoundCost', 50)
+
 lib.callback.register('garage:getImpoundedVehicles', function (source, impound)
     if not impounds[impound] then
         lib.print.warn('Invalid Impound Name')
@@ -79,3 +81,43 @@ RegisterNetEvent('garage:retrieveVehicle', function (impound, dbid)
 
     Ox.SpawnVehicle(dbid, spawnPosition.xyz, spawnPosition.w)
 end)
+
+---@class ImpoundData
+---@field entity number or netid/vin
+---@field netid number or entity/vin
+---@field vin string or entity/netid
+---@field impound string|nil
+---@field price number|nil
+---@field reason string|nil
+
+---Impound a vehicle and set custom data
+---@param data ImpoundData 
+---@return nil
+local function impoundVehicle(data)
+    if not data.entity and not data.netid and data.vin then
+        return lib.print.error('Unable to impound vehicle ! No identifying data was passed to do so.')
+    end
+
+    local vehicle
+    if data.entity then
+        vehicle = Ox.GetVehicle(data.entity)
+    elseif data.netid then
+        vehicle = Ox.GetVehicleFromNetId(data.netid)
+    elseif data.vin then
+        vehicle = Ox.GetVehicleFromVin(data.vin)
+    end
+
+    if not vehicle then
+        return lib.print.error(('Unable to find vehicle ! %s: %s didn\'t provide any results.'):format(data.entity and "entity" or data.netid and "netid" or "vin"), tostring(data.entity or data.netid or data.vin))
+    end
+
+    vehicle.setStored(data.impound or "impound", true)
+
+    if (data.reason or data.sum) and vehicle.id then
+        MySQL.update('UPDATE vehicles_impound_data SET sum = ?, reason = ? WHERE id = ?', {
+            data.sum or defaultImpoundCost, data.reason or nil, vehicle.id
+        })
+    end
+end
+
+exports('ImpoundVehicle', impoundVehicle)
