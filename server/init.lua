@@ -67,7 +67,7 @@ RegisterNetEvent('garage:retrieveVehicle', function (impound, dbid)
 
     local player = Ox.GetPlayer(source)
     local account = Ox.GetCharacterAccount(player.charId)
-    local status = account.removeBalance({ amount = 50, message = 'Impound Costs', overdraw = false })
+    local status = account.removeBalance({ amount = impoundSum, message = ('Impound Costs for: %s'):format(vin), overdraw = false })
 
     if not status.success then
         return TriggerClientEvent('ox_lib:notify', source, {description = "You do not have sufficient funds", type = "error"})
